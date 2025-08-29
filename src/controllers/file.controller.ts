@@ -1,71 +1,263 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { Db } from 'mongodb';
-import { saveFileMetadata } from '../services/file.service.js';
-import path from 'node:path';
-import mime from 'mime-types';
+import { container } from '../services/container.js';
+import { ObjectId } from 'mongodb';
 
 /**
- * 处理单/多文件上传
- * - 依赖 multer 中间件将文件写入本地磁盘
- * - 将文件元数据（时间、名称、大小、MIME、路径、上传 IP）写入数据库的 file 集合
- * - 当多文件时返回数组；当单文件时也返回仅含一个元素的数组
+ * 文件控制器
+ * 处理文件相关的HTTP请求
  */
-export async function uploadFileController(req: Request, res: Response, next: NextFunction) {
-  try {
-    const files = (Array.isArray((req as any).files) ? (req as any).files : []) as Express.Multer.File[];
-    const targetFiles: Express.Multer.File[] = files.length > 0 ? files : (req.file ? [req.file] : []);
-    if (targetFiles.length === 0) {
-      return res.status(400).json({ message: 'No file uploaded' });
+export class FileController {
+  /**
+   * 上传单文件
+   */
+  static async uploadSingleFile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const uploadService = container.getUploadService();
+      const result = await uploadService.handleSingleFileUpload(req);
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          message: result.error
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: '文件上传成功',
+        data: result.file
+      });
+    } catch (error) {
+      next(error);
     }
+  }
 
-    const db = req.app.locals.db as Db;
-    // 获取上传 IP（优先 x-forwarded-for）
-    const forwarded = req.headers['x-forwarded-for'];
-    const uploadIp = Array.isArray(forwarded) ? forwarded[0] : (forwarded || req.ip || '');
-    // 基于文件内容自动检测 MIME 类型，优先使用检测结果
-    // 逐个文件检测 MIME 并入库
-    const mod: any = await import('file-type').catch(() => ({}));
-    const results = [] as Array<{
-      originalName: string;
-      mimeType: string;
-      size: number;
-      filename: string;
-      uploadedAt: Date;
-    }>;
+  /**
+   * 上传多文件
+   */
+  static async uploadMultipleFiles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const uploadService = container.getUploadService();
+      const result = await uploadService.handleMultipleFileUpload(req);
 
-    for (const f of targetFiles) {
-      let detectedMime = '';
-      try {
-        if (typeof mod.fileTypeFromFile === 'function') {
-          const detected = await mod.fileTypeFromFile(f.path);
-          detectedMime = detected?.mime || '';
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          message: '文件上传失败',
+          errors: result.errors
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: '文件上传成功',
+        data: {
+          files: result.files,
+          total: result.files?.length || 0,
+          errors: result.errors
         }
-      } catch {}
-      const extFallback = mime.lookup(path.extname(f.originalname)) || '';
-      const finalMime = detectedMime || f.mimetype || (typeof extFallback === 'string' ? extFallback : '');
-
-      await saveFileMetadata(db, {
-        originalName: f.originalname,
-        mimeType: finalMime,
-        size: f.size,
-        filename: f.filename,
-        filepath: f.path,
-        uploadedAt: new Date(),
-        uploadIp,
       });
-
-      results.push({
-        originalName: f.originalname,
-        mimeType: finalMime,
-        size: f.size,
-        filename: f.filename,
-        uploadedAt: new Date(),
-      });
+    } catch (error) {
+      next(error);
     }
+  }
 
-    return res.status(201).json({ data: results });
-  } catch (error) {
-    next(error);
+  /**
+   * 获取文件列表
+   */
+  static async getFiles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const fileService = container.getFileService();
+      const { page = 1, limit = 20, uploaderId, status, tags, mimeType } = req.query;
+
+      const query = {
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        uploaderId: uploaderId ? new ObjectId(uploaderId as string) : undefined,
+        status: status as any,
+        tags: tags ? (Array.isArray(tags) ? tags.map(t => String(t)) : [String(tags)]) : undefined,
+        mimeType: mimeType as string
+      };
+
+      const result = await fileService.findFiles(query);
+
+      res.json({
+        success: true,
+        data: result.files,
+        pagination: {
+          page: query.page,
+          limit: query.limit,
+          total: result.total,
+          pages: Math.ceil(result.total / query.limit)
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取文件详情
+   */
+  static async getFileById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const fileService = container.getFileService();
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的文件ID'
+        });
+      }
+
+      const file = await fileService.findFileById(new ObjectId(id));
+      if (!file) {
+        return res.status(404).json({
+          success: false,
+          message: '文件不存在'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: file
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 更新文件信息
+   */
+  static async updateFile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { tags, description, status } = req.body;
+      const fileService = container.getFileService();
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的文件ID'
+        });
+      }
+
+      const updates = { tags, description, status };
+      const success = await fileService.updateFile(new ObjectId(id), updates);
+
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: '文件不存在或更新失败'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: '文件更新成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 删除文件（软删除）
+   */
+  static async deleteFile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const fileService = container.getFileService();
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的文件ID'
+        });
+      }
+
+      const success = await fileService.deleteFile(new ObjectId(id));
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: '文件不存在或删除失败'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: '文件删除成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取文件统计信息
+   */
+  static async getFileStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const fileService = container.getFileService();
+      const { uploaderId } = req.query;
+
+      const stats = await fileService.getFileStats(
+        uploaderId ? new ObjectId(uploaderId as string) : undefined
+      );
+
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 批量更新文件状态
+   */
+  static async batchUpdateStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { fileIds, status } = req.body;
+      const fileService = container.getFileService();
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: '请提供有效的文件ID列表'
+        });
+      }
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: '请提供要更新的状态'
+        });
+      }
+
+      // 验证所有ID都是有效的ObjectId
+      const validIds = fileIds.filter(id => ObjectId.isValid(id));
+      if (validIds.length !== fileIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: '包含无效的文件ID'
+        });
+      }
+
+      const objectIds = validIds.map(id => new ObjectId(id));
+      const updatedCount = await fileService.batchUpdateStatus(objectIds, status);
+
+      res.json({
+        success: true,
+        message: `成功更新 ${updatedCount} 个文件的状态`,
+        data: { updatedCount }
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 }
 

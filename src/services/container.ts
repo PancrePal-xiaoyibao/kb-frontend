@@ -1,6 +1,8 @@
 import { Db } from 'mongodb';
 import { getDatabase } from '../db.js';
 import { AuthService } from './auth.service.js';
+import { FileService } from './file.service.js';
+import { UploadService } from './upload.service.js';
 
 // 服务统一启动容器
 
@@ -8,6 +10,8 @@ export class ServiceContainer {
   private static instance: ServiceContainer;
   private db: Db | null = null;
   private authService: AuthService | null = null;
+  private fileService: FileService | null = null;
+  private uploadService: UploadService | null = null;
   private initialized = false;
 
   private constructor() {}
@@ -27,6 +31,8 @@ export class ServiceContainer {
     try {
       this.db = getDatabase();
       this.authService = new AuthService(this.db);
+      this.fileService = new FileService(this.db);
+      this.uploadService = new UploadService(this.fileService);
       this.initialized = true;
       console.log('Service container initialized successfully');
     } catch (error) {
@@ -40,6 +46,20 @@ export class ServiceContainer {
       throw new Error('Service container not initialized. Call initialize() first.');
     }
     return this.authService;
+  }
+
+  getFileService(): FileService {
+    if (!this.initialized || !this.fileService) {
+      throw new Error('Service container not initialized. Call initialize() first.');
+    }
+    return this.fileService;
+  }
+
+  getUploadService(): UploadService {
+    if (!this.initialized || !this.uploadService) {
+      throw new Error('Service container not initialized. Call initialize() first.');
+    }
+    return this.uploadService;
   }
 
   isInitialized(): boolean {
