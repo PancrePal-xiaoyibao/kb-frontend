@@ -18,7 +18,7 @@ export class UploadService {
   /**
    * 处理单文件上传
    */
-  async handleSingleFileUpload(req: Request, uploaderId?: ObjectId): Promise<{
+  async handleSingleFileUpload(req: Request, uploaderId?: ObjectId, categories?: string[]): Promise<{
     success: boolean;
     file?: any;
     error?: string;
@@ -43,6 +43,7 @@ export class UploadService {
         filepath: file.path,
         uploaderId,
         uploadIp,
+        categories: categories || [],
         tags: this.extractTagsFromFilename(file.originalname),
         description: this.generateDescription(file)
       };
@@ -66,7 +67,7 @@ export class UploadService {
   /**
    * 处理多文件上传
    */
-  async handleMultipleFileUpload(req: Request, uploaderId?: ObjectId): Promise<{
+  async handleMultipleFileUpload(req: Request, uploaderId?: ObjectId, categories?: string[]): Promise<{
     success: boolean;
     files?: any[];
     errors?: string[];
@@ -94,6 +95,7 @@ export class UploadService {
             filepath: file.path,
             uploaderId,
             uploadIp,
+            categories: categories || [],
             tags: this.extractTagsFromFilename(file.originalname),
             description: this.generateDescription(file)
           };

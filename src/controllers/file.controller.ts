@@ -13,7 +13,8 @@ export class FileController {
   static async uploadSingleFile(req: Request, res: Response, next: NextFunction) {
     try {
       const uploadService = container.getUploadService();
-      const result = await uploadService.handleSingleFileUpload(req);
+      const { categories } = req.body;
+      const result = await uploadService.handleSingleFileUpload(req, undefined, categories);
 
       if (!result.success) {
         return res.status(400).json({
@@ -38,7 +39,8 @@ export class FileController {
   static async uploadMultipleFiles(req: Request, res: Response, next: NextFunction) {
     try {
       const uploadService = container.getUploadService();
-      const result = await uploadService.handleMultipleFileUpload(req);
+      const { categories } = req.body;
+      const result = await uploadService.handleMultipleFileUpload(req, undefined, categories);
 
       if (!result.success) {
         return res.status(400).json({
@@ -68,13 +70,14 @@ export class FileController {
   static async getFiles(req: Request, res: Response, next: NextFunction) {
     try {
       const fileService = container.getFileService();
-      const { page = 1, limit = 20, uploaderId, status, tags, mimeType } = req.query;
+      const { page = 1, limit = 20, uploaderId, status, categories, tags, mimeType } = req.query;
 
       const query = {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         uploaderId: uploaderId ? new ObjectId(uploaderId as string) : undefined,
         status: status as any,
+        categories: categories ? (Array.isArray(categories) ? categories.map(c => String(c)) : [String(categories)]) : undefined,
         tags: tags ? (Array.isArray(tags) ? tags.map(t => String(t)) : [String(tags)]) : undefined,
         mimeType: mimeType as string
       };
@@ -134,7 +137,7 @@ export class FileController {
   static async updateFile(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { tags, description, status } = req.body;
+      const { categories, tags, description, status } = req.body;
       const fileService = container.getFileService();
 
       if (!ObjectId.isValid(id)) {
@@ -144,7 +147,7 @@ export class FileController {
         });
       }
 
-      const updates = { tags, description, status };
+      const updates = { categories, tags, description, status };
       const success = await fileService.updateFile(new ObjectId(id), updates);
 
       if (!success) {
@@ -210,6 +213,23 @@ export class FileController {
       res.json({
         success: true,
         data: stats
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取所有分类列表
+   */
+  static async getCategories(req: Request, res: Response, next: NextFunction) {
+    try {
+      const fileService = container.getFileService();
+      const categories = await fileService.getAllCategories();
+
+      res.json({
+        success: true,
+        data: categories
       });
     } catch (error) {
       next(error);

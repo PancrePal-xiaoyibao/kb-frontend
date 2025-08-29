@@ -77,6 +77,7 @@ export class FileService {
     
     if (query.uploaderId) filter.uploaderId = query.uploaderId;
     if (query.status) filter.status = query.status;
+    if (query.categories && query.categories.length > 0) filter.categories = { $in: query.categories };
     if (query.tags && query.tags.length > 0) filter.tags = { $in: query.tags };
     if (query.mimeType) filter.mimeType = query.mimeType;
     if (query.startDate || query.endDate) {
@@ -224,6 +225,23 @@ export class FileService {
     );
 
     return result.modifiedCount;
+  }
+
+  /**
+   * 获取所有分类列表
+   */
+  async getAllCategories(): Promise<string[]> {
+    const collection = this.db.collection<FileModel>(this.collection);
+    
+    const pipeline = [
+      { $match: { status: { $ne: FileStatus.DELETED } } },
+      { $unwind: '$categories' },
+      { $group: { _id: '$categories' } },
+      { $sort: { _id: 1 } }
+    ];
+
+    const result = await collection.aggregate(pipeline).toArray();
+    return result.map(item => item._id);
   }
 }
 

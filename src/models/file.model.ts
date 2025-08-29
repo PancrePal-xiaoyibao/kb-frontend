@@ -14,6 +14,7 @@ export interface FileModel {
   uploaderId?: ObjectId;      // 上传者ID（关联用户）
   uploadIp: string;           // 上传者IP地址
   status: FileStatus;         // 文件状态
+  categories: string[];       // 文件分类（前端提供）
   tags?: string[];            // 文件标签
   description?: string;        // 文件描述
   uploadedAt: Date;           // 上传时间
@@ -41,6 +42,7 @@ export interface FileInput {
   filepath: string;
   uploaderId?: ObjectId;
   uploadIp: string;
+  categories: string[];       // 文件分类（前端提供）
   tags?: string[];
   description?: string;
 }
@@ -51,6 +53,7 @@ export interface FileInput {
 export interface FileQuery {
   uploaderId?: ObjectId;
   status?: FileStatus;
+  categories?: string[];      // 按分类筛选
   tags?: string[];
   mimeType?: string;
   startDate?: Date;
@@ -63,6 +66,7 @@ export interface FileQuery {
  * 文件更新接口
  */
 export interface FileUpdate {
+  categories?: string[];      // 更新分类
   tags?: string[];
   description?: string;
   status?: FileStatus;

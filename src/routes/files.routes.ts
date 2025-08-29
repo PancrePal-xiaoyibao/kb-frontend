@@ -16,6 +16,7 @@ router.post('/upload/multiple', uploadMultiple.array('files', 5), FileController
 // 文件管理相关路由
 router.get('/', FileController.getFiles);
 router.get('/stats', FileController.getFileStats);
+router.get('/categories', FileController.getCategories);
 router.get('/:id', FileController.getFileById);
 router.put('/:id', FileController.updateFile);
 router.delete('/:id', FileController.deleteFile);
