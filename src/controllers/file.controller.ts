@@ -5,13 +5,16 @@ import path from 'node:path';
 import mime from 'mime-types';
 
 /**
- * 处理单文件上传
+ * 处理单/多文件上传
  * - 依赖 multer 中间件将文件写入本地磁盘
  * - 将文件元数据（时间、名称、大小、MIME、路径、上传 IP）写入数据库的 file 集合
+ * - 当多文件时返回数组；当单文件时也返回仅含一个元素的数组
  */
 export async function uploadFileController(req: Request, res: Response, next: NextFunction) {
   try {
-    if (!req.file) {
+    const files = (Array.isArray((req as any).files) ? (req as any).files : []) as Express.Multer.File[];
+    const targetFiles: Express.Multer.File[] = files.length > 0 ? files : (req.file ? [req.file] : []);
+    if (targetFiles.length === 0) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
@@ -20,29 +23,47 @@ export async function uploadFileController(req: Request, res: Response, next: Ne
     const forwarded = req.headers['x-forwarded-for'];
     const uploadIp = Array.isArray(forwarded) ? forwarded[0] : (forwarded || req.ip || '');
     // 基于文件内容自动检测 MIME 类型，优先使用检测结果
-    // 动态导入 file-type（其导出在不同环境下可能变动）
-    let detectedMime = '';
-    try {
-      const mod: any = await import('file-type');
-      if (typeof mod.fileTypeFromFile === 'function') {
-        const detected = await mod.fileTypeFromFile(req.file.path);
-        detectedMime = detected?.mime || '';
-      }
-    } catch {}
-    const extFallback = mime.lookup(path.extname(req.file.originalname)) || '';
-    const finalMime = detectedMime || req.file.mimetype || (typeof extFallback === 'string' ? extFallback : '');
+    // 逐个文件检测 MIME 并入库
+    const mod: any = await import('file-type').catch(() => ({}));
+    const results = [] as Array<{
+      originalName: string;
+      mimeType: string;
+      size: number;
+      filename: string;
+      uploadedAt: Date;
+    }>;
 
-    const saved = await saveFileMetadata(db, {
-      originalName: req.file.originalname,
-      mimeType: finalMime,
-      size: req.file.size,
-      filename: req.file.filename,
-      filepath: req.file.path,
-      uploadedAt: new Date(),
-      uploadIp,
-    });
+    for (const f of targetFiles) {
+      let detectedMime = '';
+      try {
+        if (typeof mod.fileTypeFromFile === 'function') {
+          const detected = await mod.fileTypeFromFile(f.path);
+          detectedMime = detected?.mime || '';
+        }
+      } catch {}
+      const extFallback = mime.lookup(path.extname(f.originalname)) || '';
+      const finalMime = detectedMime || f.mimetype || (typeof extFallback === 'string' ? extFallback : '');
 
-    return res.status(201).json({ data: saved });
+      await saveFileMetadata(db, {
+        originalName: f.originalname,
+        mimeType: finalMime,
+        size: f.size,
+        filename: f.filename,
+        filepath: f.path,
+        uploadedAt: new Date(),
+        uploadIp,
+      });
+
+      results.push({
+        originalName: f.originalname,
+        mimeType: finalMime,
+        size: f.size,
+        filename: f.filename,
+        uploadedAt: new Date(),
+      });
+    }
+
+    return res.status(201).json({ data: results });
   } catch (error) {
     next(error);
   }

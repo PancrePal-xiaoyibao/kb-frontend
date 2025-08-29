@@ -30,4 +30,11 @@ const storage = multer.diskStorage({
  */
 export const uploadSingle = multer({ storage }).single('file');
 
+/**
+ * 兼容单/多文件上传
+ * - 当请求包含一个文件时，你可以从 req.file 读取
+ * - 当请求包含多个文件时，你可以从 req.files 读取（数组）
+ */
+export const uploadAny = multer({ storage }).any();
+
 
