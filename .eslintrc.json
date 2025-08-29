@@ -1,0 +1,13 @@
+{
+  "extends": ["eslint:recommended", "plugin:import/recommended", "prettier"],
+  "env": { "node": true, "es2022": true },
+  "parserOptions": { "ecmaVersion": 2022, "sourceType": "module" },
+  "settings": { "import/resolver": { "node": { "extensions": [".ts", ".js"] } } },
+  "overrides": [{
+    "files": ["**/*.ts"],
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": ["plugin:@typescript-eslint/recommended"]
+  }]
+}
+
