@@ -36,12 +36,16 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "1.4.13",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "17.2.1",
     "express": "^4.21.2",
     "file-type": "18.7.0",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mime-types": "2.1.35",
     "mongodb": "6.19.0",
     "morgan": "^1.10.1",
