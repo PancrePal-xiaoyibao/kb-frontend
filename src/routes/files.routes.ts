@@ -5,7 +5,7 @@ import { uploadFileController } from '../controllers/file.controller.js';
 const router = Router();
 
 // POST /api/v1/file/upload - 上传单/多文件
-router.post('/file/upload', uploadAny, uploadFileController);
+router.post('/upload', uploadAny, uploadFileController);
 
 export default router;
 

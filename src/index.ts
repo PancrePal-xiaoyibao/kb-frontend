@@ -19,13 +19,16 @@ app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
 // API v1
-app.use('/api/v1', filesRouter);
+app.use('/api/v1/file', filesRouter);
 app.use('/api/v1/auth', authRouter);
+
+// 全局404处理 - 捕获所有未匹配的路由
+app.use('*', (_req, res) => {
+  res.status(404).json({
+    message: '->你似乎来到了接口的荒漠<-'
+  });
+});
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/kb_local';
