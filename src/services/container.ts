@@ -5,6 +5,7 @@ import { FileService } from './file.service.js';
 import { UploadService } from './upload.service.js';
 import { FileStorageService } from './file-storage.service.js';
 import { ShortCodeService } from './shortcode.service.js';
+import logger from '../utils/logger.js';
 
 // 服务统一启动容器
 
@@ -40,9 +41,9 @@ export class ServiceContainer {
       this.shortCodeService = new ShortCodeService(this.db);
       this.uploadService = new UploadService(this.fileService, this.shortCodeService);
       this.initialized = true;
-      console.log('Service container initialized successfully');
+      logger.info('Service container initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize service container:', error);
+      logger.error('Failed to initialize service container:', error);
       throw error;
     }
   }

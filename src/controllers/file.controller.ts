@@ -1,6 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import { container } from '../services/container.js';
 import { ObjectId } from 'mongodb';
+import { createLogger } from '../utils/logger.js';
+
+// 创建文件控制器日志器
+const logger = createLogger('FileController');
 
 /**
  * 文件控制器
@@ -16,8 +20,16 @@ export class FileController {
       const uploadService = container.getUploadService();
       const { categories } = req.body;
       
+      logger.info('收到文件上传请求', { 
+        fileCount: req.files?.length || 0,
+        categories,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       // 检查是否有文件
       if (!req.files || req.files.length === 0) {
+        logger.warn('文件上传失败：没有接收到文件', { ip: req.ip });
         return res.status(400).json({
           success: false,
           message: '没有接收到文件'
@@ -25,11 +37,20 @@ export class FileController {
       }
 
       const files = req.files as Express.Multer.File[];
+      logger.dev('开始处理文件上传', { 
+        fileCount: files.length,
+        fileNames: files.map(f => f.originalname),
+        totalSize: files.reduce((sum, f) => sum + f.size, 0)
+      });
       
       // 使用统一的文件上传处理方法
       const result = await uploadService.handleFileUpload(files, req, categories);
       
       if (!result.success) {
+        logger.warn('文件上传处理失败', { 
+          errors: result.errors,
+          fileCount: files.length
+        });
         return res.status(400).json({
           success: false,
           message: '文件上传失败',
@@ -39,14 +60,27 @@ export class FileController {
 
       // 如果只有一个文件，返回单文件格式
       if (result.files && result.files.length === 1) {
+        const file = result.files[0];
+        logger.info('单文件上传成功', { 
+          fileName: file.originalname,
+          fileId: file._id,
+          size: file.size,
+          mimeType: file.mimeType
+        });
         return res.status(201).json({
           success: true,
           message: '文件上传成功',
-          data: result.files[0]
+          data: file
         });
       }
 
       // 多文件返回格式
+      logger.info('多文件上传成功', { 
+        totalFiles: result.files?.length || 0,
+        successCount: result.files?.length || 0,
+        errorCount: result.errors?.length || 0
+      });
+      
       res.status(201).json({
         success: true,
         message: '文件上传成功',
@@ -57,6 +91,7 @@ export class FileController {
         }
       });
     } catch (error) {
+      logger.errorWithStack('文件上传过程中发生错误', error as Error);
       next(error);
     }
   }
@@ -69,6 +104,17 @@ export class FileController {
       const fileService = container.getFileService();
       const { page = 1, limit = 20, uploaderId, status, categories, tags, mimeType } = req.query;
 
+      logger.info('收到获取文件列表请求', { 
+        page, 
+        limit, 
+        uploaderId, 
+        status, 
+        categories, 
+        tags, 
+        mimeType,
+        ip: req.ip
+      });
+
       const query = {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
@@ -79,7 +125,15 @@ export class FileController {
         mimeType: mimeType as string
       };
 
+      logger.dev('执行文件查询', { query });
       const result = await fileService.findFiles(query);
+
+      logger.info('文件列表查询成功', { 
+        totalFiles: result.total,
+        returnedFiles: result.files.length,
+        page: query.page,
+        limit: query.limit
+      });
 
       res.json({
         success: true,
@@ -92,6 +146,7 @@ export class FileController {
         }
       });
     } catch (error) {
+      logger.errorWithStack('获取文件列表时发生错误', error as Error);
       next(error);
     }
   }

@@ -2,6 +2,10 @@ import type { Db, ObjectId } from 'mongodb';
 import { FileModel, FileInput, FileQuery, FileUpdate, FileStatus } from '../models/file.model';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createLogger } from '../utils/logger.js';
+
+// 创建文件服务日志器
+const logger = createLogger('FileService');
 
 /**
  * 文件服务类
@@ -13,23 +17,43 @@ export class FileService {
 
   constructor(db: Db) {
     this.db = db;
+    logger.info('文件服务初始化完成', { collection: this.collection });
   }
 
   /**
    * 保存文件元数据到数据库
    */
   async saveFileMetadata(fileData: FileInput): Promise<FileModel> {
-    const collection = this.db.collection<FileModel>(this.collection);
-    
-    const doc: Omit<FileModel, '_id'> = {
-      ...fileData,
-      status: FileStatus.ACTIVE,
-      uploadedAt: new Date(),
-      updatedAt: new Date()
-    };
+    try {
+      logger.dev('保存文件元数据到数据库', { 
+        fileName: fileData.originalName,
+        mimeType: fileData.mimeType,
+        size: fileData.size,
+        uploaderId: fileData.uploaderId
+      });
 
-    const { insertedId } = await collection.insertOne(doc as any);
-    return { ...doc, _id: insertedId };
+      const collection = this.db.collection<FileModel>(this.collection);
+      
+      const doc: Omit<FileModel, '_id'> = {
+        ...fileData,
+        status: FileStatus.ACTIVE,
+        uploadedAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const { insertedId } = await collection.insertOne(doc as any);
+      const result = { ...doc, _id: insertedId };
+      
+      logger.info('文件元数据保存成功', { 
+        fileId: insertedId.toString(),
+        fileName: fileData.originalName
+      });
+      
+      return result;
+    } catch (error) {
+      logger.errorWithStack('保存文件元数据失败', error as Error);
+      throw error;
+    }
   }
 
   /**
