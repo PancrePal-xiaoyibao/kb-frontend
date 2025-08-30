@@ -10,9 +10,11 @@ import path from 'node:path';
  */
 export class UploadService {
   private fileService: FileService;
+  private shortCodeService: any; // 暂时使用any，后面会通过容器注入
 
-  constructor(fileService: FileService) {
+  constructor(fileService: FileService, shortCodeService?: any) {
     this.fileService = fileService;
+    this.shortCodeService = shortCodeService;
   }
 
   /**
@@ -34,8 +36,14 @@ export class UploadService {
       const file = req.file;
       const uploadIp = this.getClientIp(req);
 
+      // 生成唯一短码
+      const shortCode = this.shortCodeService ? 
+        await this.shortCodeService.generateUniqueShortCode() : 
+        'TEMP' + Math.random().toString(36).substr(2, 4).toUpperCase();
+
       // 构建文件输入数据
       const fileInput: FileInput = {
+        shortCode,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
@@ -86,7 +94,13 @@ export class UploadService {
 
       for (const file of files) {
         try {
+          // 生成唯一短码
+          const shortCode = this.shortCodeService ? 
+            await this.shortCodeService.generateUniqueShortCode() : 
+            'TEMP' + Math.random().toString(36).substr(2, 4).toUpperCase();
+
           const fileInput: FileInput = {
+            shortCode,
             originalName: file.originalname,
             mimeType: file.mimetype,
             size: file.size,
@@ -150,7 +164,13 @@ export class UploadService {
 
       for (const file of files) {
         try {
+          // 生成唯一短码
+          const shortCode = this.shortCodeService ? 
+            await this.shortCodeService.generateUniqueShortCode() : 
+            'TEMP' + Math.random().toString(36).substr(2, 4).toUpperCase();
+
           const fileInput: FileInput = {
+            shortCode,
             originalName: file.originalname,
             mimeType: file.mimetype,
             size: file.size,

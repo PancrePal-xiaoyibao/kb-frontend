@@ -41,6 +41,14 @@ export class FileService {
   }
 
   /**
+   * 根据短码查找文件
+   */
+  async findFileByShortCode(shortCode: string): Promise<FileModel | null> {
+    const collection = this.db.collection<FileModel>(this.collection);
+    return await collection.findOne({ shortCode, status: { $ne: FileStatus.DELETED } });
+  }
+
+  /**
    * 根据上传者ID查找文件
    */
   async findFilesByUploader(uploaderId: ObjectId, page: number = 1, limit: number = 20): Promise<{ files: FileModel[], total: number }> {

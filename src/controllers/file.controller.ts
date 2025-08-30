@@ -122,6 +122,56 @@ export class FileController {
       // 不返回敏感信息，只返回前端需要的数据
       const safeFile = {
         _id: file._id,
+        shortCode: file.shortCode,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+        size: file.size,
+        filename: file.filename,
+        uploaderId: file.uploaderId,
+        status: file.status,
+        categories: file.categories,
+        tags: file.tags,
+        description: file.description,
+        uploadedAt: file.uploadedAt,
+        updatedAt: file.updatedAt
+      };
+
+      res.json({
+        success: true,
+        data: safeFile
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 根据短码获取文件
+   */
+  static async getFileByShortCode(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { shortCode } = req.params;
+      const fileService = container.getFileService();
+
+      if (!shortCode || shortCode.length !== 6) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的短码'
+        });
+      }
+
+      const file = await fileService.findFileByShortCode(shortCode.toUpperCase());
+      if (!file) {
+        return res.status(404).json({
+          success: false,
+          message: '文件不存在'
+        });
+      }
+
+      // 不返回敏感信息，只返回前端需要的数据
+      const safeFile = {
+        _id: file._id,
+        shortCode: file.shortCode,
         originalName: file.originalName,
         mimeType: file.mimeType,
         size: file.size,

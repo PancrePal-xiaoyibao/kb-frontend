@@ -6,6 +6,7 @@ import { ObjectId } from 'mongodb';
  */
 export interface FileModel {
   _id?: ObjectId;
+  shortCode: string;          // 六位短码（大写字母+数字）
   originalName: string;        // 原始文件名
   mimeType: string;           // MIME类型
   size: number;               // 文件大小（字节）
@@ -34,6 +35,7 @@ export enum FileStatus {
  * 文件输入接口
  */
 export interface FileInput {
+  shortCode: string;          // 六位短码
   originalName: string;
   mimeType: string;
   size: number;

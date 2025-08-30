@@ -16,6 +16,7 @@ router.post('/upload', uploadMultiple.array('file', 5), FileController.uploadFil
 router.get('/', FileController.getFiles);
 router.get('/stats', FileController.getFileStats);
 router.get('/categories', FileController.getCategories);
+router.get('/shortcode/:shortCode', FileController.getFileByShortCode);
 router.get('/:id', FileController.getFileById);
 router.get('/:id/download', FileController.downloadFile);
 router.put('/:id', FileController.updateFile);
