@@ -25,6 +25,8 @@ export interface FileModel {
   linkTitle?: string;         // 链接标题
   linkDescription?: string;   // 链接描述
   linkThumbnail?: string;     // 链接缩略图URL
+  // 元数据处理状态
+  metadataStatus?: MetadataStatus;  // 元数据处理状态
 }
 
 /**
@@ -35,6 +37,16 @@ export enum FileStatus {
   DELETED = 'deleted',         // 已删除
   PROCESSING = 'processing',   // 处理中
   ERROR = 'error'              // 错误
+}
+
+/**
+ * 元数据处理状态枚举
+ */
+export enum MetadataStatus {
+  PENDING = 'pending',         // 等待处理
+  PROCESSING = 'processing',   // 处理中
+  COMPLETED = 'completed',     // 处理完成
+  FAILED = 'failed'            // 处理失败
 }
 
 /**
@@ -57,6 +69,8 @@ export interface FileInput {
   linkTitle?: string;
   linkDescription?: string;
   linkThumbnail?: string;
+  // 元数据处理状态
+  metadataStatus?: MetadataStatus;
 }
 
 /**

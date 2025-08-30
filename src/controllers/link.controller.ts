@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { container } from '../services/container.js';
 import { ObjectId } from 'mongodb';
 import { createLogger } from '../utils/logger.js';
+import { LinkUploadService } from '../services/link-upload.service.js';
 
 // 创建链接控制器日志器
 const logger = createLogger('LinkController');
@@ -302,6 +303,56 @@ export class LinkController {
       });
     } catch (error) {
       logger.errorWithStack('搜索链接时发生错误', error as Error);
+      next(error);
+    }
+  }
+
+  /**
+   * 获取链接元数据处理状态
+   */
+  static async getMetadataStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { linkId } = req.params;
+      
+      if (!ObjectId.isValid(linkId)) {
+        res.status(400).json({ error: '无效的链接ID' });
+        return;
+      }
+
+      const linkUploadService = container.getLinkUploadService();
+      const status = await linkUploadService.getMetadataStatus(new ObjectId(linkId));
+      
+      res.json({
+        success: true,
+        data: status
+      });
+      
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 手动重试元数据提取
+   */
+  static async retryMetadataExtraction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { linkId } = req.params;
+      
+      if (!ObjectId.isValid(linkId)) {
+        res.status(400).json({ error: '无效的链接ID' });
+        return;
+      }
+
+      const linkUploadService = container.getLinkUploadService();
+      await linkUploadService.retryMetadataExtraction(new ObjectId(linkId));
+      
+      res.json({
+        success: true,
+        message: '元数据重新提取已启动'
+      });
+      
+    } catch (error) {
       next(error);
     }
   }

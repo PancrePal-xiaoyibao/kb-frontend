@@ -10,4 +10,10 @@ router.post('/upload', LinkController.uploadLinks);
 router.get('/', LinkController.getLinks);
 router.get('/search', LinkController.searchLinks);
 
+// 获取链接元数据处理状态
+router.get('/:linkId/metadata-status', LinkController.getMetadataStatus.bind(LinkController));
+
+// 手动重试元数据提取
+router.post('/:linkId/retry-metadata', LinkController.retryMetadataExtraction.bind(LinkController));
+
 export default router;

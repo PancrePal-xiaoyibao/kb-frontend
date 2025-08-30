@@ -1,55 +1,116 @@
-# 知识库上传系统后端
+# KB Frontend
 
-基于Express.js和MongoDB构建的知识库文件上传系统后端服务。
+知识库文件上传和管理系统的前端服务
 
-## 🚀 项目启动
+## 功能特性
 
-### 环境要求
-- Node.js >= 18.0.0
-- MongoDB >= 5.0
-- npm 或 yarn
+- 文件上传和管理
+- 链接上传和元数据提取
+- 用户认证和授权
+- 短链接生成
+- 分类和标签管理
+- 搜索功能
 
-### 快速开始
+## 环境配置
 
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/PancrePal-xiaoyibao/kb-frontend.git
-   cd kb-frontend
-   ```
+复制 `.env.dev` 为 `.env` 并修改配置：
 
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
+```bash
+cp .env.dev .env
+```
 
-3. **配置环境变量**
-   复制 `.env.dev` 为 `.env` 并修改配置：
-   ```bash
-   cp .env.dev .env
-   ```
+### 环境变量说明
 
-4. **启动MongoDB**
-   确保本地MongoDB服务已启动，或使用Docker：
-   ```bash
-   docker run -d -p 27017:27017 --name mongodb mongo:latest
-   ```
+#### 基础配置
+- `PORT`: 服务端口号（默认：3000）
+- `NODE_ENV`: 运行环境（development/production/test）
+- `BASE_URL`: 服务基础URL（默认：http://localhost:3000）
 
-5. **启动开发服务器**
-   ```bash
-   npm run dev
-   ```
+#### 数据库配置
+- `MONGODB_URI`: MongoDB连接字符串（默认：mongodb://127.0.0.1:27017/kb_local）
 
-   服务器将在 `http://localhost:3000` 启动
+#### 认证配置
+- `JWT_SECRET`: JWT签名密钥
+- `ADMIN_USERNAME`: 管理员用户名
+- `ADMIN_PASSWORD`: 管理员密码
 
-## 🔧 调试指南
+#### CORS配置
+- `CORS_ORIGIN`: 允许的跨域来源，多个用逗号分隔（默认：*）
 
-### 开发模式
-- 使用 `npm run dev` 启动，支持热重载
-- 使用 `npm run build` 构建生产版本
-- 使用 `npm start` 启动生产版本
+#### Open Graph服务配置
+- `OG_SERVICE_URL`: 自定义Open Graph服务URL（可选，默认使用内置服务列表）
 
-### 测试API
-使用项目根目录的 `user.http` 文件进行API测试：
-- 安装REST Client插件（VS Code）
-- 打开 `user.http` 文件
-- 点击 "Send Request" 测试各个接口
+系统内置了多个Open Graph服务作为备用：
+- `https://api.microlink.io?url=`
+- `https://opengraph.xyz/api/v1/site-info?url=`
+
+## 安装和运行
+
+### 安装依赖
+```bash
+npm install
+```
+
+### 开发模式运行
+```bash
+npm run dev
+```
+
+### 生产模式运行
+```bash
+npm run build
+npm start
+```
+
+### 运行测试
+```bash
+npm test
+```
+
+## API文档
+
+### 文件上传
+- `POST /api/files/upload` - 上传文件
+- `GET /api/files/:shortCode` - 获取文件信息
+- `GET /api/files` - 获取文件列表
+
+### 链接上传
+- `POST /api/links/upload` - 上传链接
+- `POST /api/links/batch` - 批量上传链接
+- `GET /api/links/search` - 搜索链接
+
+### 用户认证
+- `POST /api/auth/login` - 用户登录
+- `POST /api/auth/register` - 用户注册
+- `GET /api/auth/profile` - 获取用户信息
+
+## 技术栈
+
+- Node.js
+- TypeScript
+- Express.js
+- MongoDB
+- JWT认证
+- Multer文件上传
+- Jest测试框架
+
+## 开发说明
+
+### 链接元数据提取
+
+系统支持通过多种Open Graph服务自动提取链接的元数据：
+
+1. **标题提取**: 优先提取 `og:title`，其次提取 `<title>` 标签
+2. **描述提取**: 优先提取 `og:description`，其次提取 `meta[name="description"]`
+3. **缩略图提取**: 提取 `og:image`，自动处理相对URL转换为绝对URL
+
+### 服务容错机制
+
+- 支持多个备用服务，自动切换
+- 请求超时保护（15秒）
+- 错误日志记录，不影响上传流程
+- 优雅降级，元数据提取失败时仍可正常上传
+
+## 许可证
+
+MIT License
