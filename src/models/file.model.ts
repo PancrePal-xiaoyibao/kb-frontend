@@ -10,7 +10,6 @@ export interface FileModel {
   mimeType: string;           // MIME类型
   size: number;               // 文件大小（字节）
   filename: string;           // 存储后的文件名
-  filepath: string;           // 文件存储路径
   uploaderId?: ObjectId;      // 上传者ID（关联用户）
   uploadIp: string;           // 上传者IP地址
   status: FileStatus;         // 文件状态
@@ -39,7 +38,6 @@ export interface FileInput {
   mimeType: string;
   size: number;
   filename: string;
-  filepath: string;
   uploaderId?: ObjectId;
   uploadIp: string;
   categories: string[];       // 文件分类（前端提供）

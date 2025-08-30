@@ -8,40 +8,27 @@ import { ObjectId } from 'mongodb';
  */
 export class FileController {
   /**
-   * 上传单文件
+   * 统一文件上传接口
+   * 支持单文件和多文件上传
    */
-  static async uploadSingleFile(req: Request, res: Response, next: NextFunction) {
+  static async uploadFiles(req: Request, res: Response, next: NextFunction) {
     try {
       const uploadService = container.getUploadService();
       const { categories } = req.body;
-      const result = await uploadService.handleSingleFileUpload(req, undefined, categories);
-
-      if (!result.success) {
+      
+      // 检查是否有文件
+      if (!req.files || req.files.length === 0) {
         return res.status(400).json({
           success: false,
-          message: result.error
+          message: '没有接收到文件'
         });
       }
 
-      res.status(201).json({
-        success: true,
-        message: '文件上传成功',
-        data: result.file
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 上传多文件
-   */
-  static async uploadMultipleFiles(req: Request, res: Response, next: NextFunction) {
-    try {
-      const uploadService = container.getUploadService();
-      const { categories } = req.body;
-      const result = await uploadService.handleMultipleFileUpload(req, undefined, categories);
-
+      const files = req.files as Express.Multer.File[];
+      
+      // 使用统一的文件上传处理方法
+      const result = await uploadService.handleFileUpload(files, req, categories);
+      
       if (!result.success) {
         return res.status(400).json({
           success: false,
@@ -50,6 +37,16 @@ export class FileController {
         });
       }
 
+      // 如果只有一个文件，返回单文件格式
+      if (result.files && result.files.length === 1) {
+        return res.status(201).json({
+          success: true,
+          message: '文件上传成功',
+          data: result.files[0]
+        });
+      }
+
+      // 多文件返回格式
       res.status(201).json({
         success: true,
         message: '文件上传成功',
@@ -122,10 +119,78 @@ export class FileController {
         });
       }
 
+      // 不返回敏感信息，只返回前端需要的数据
+      const safeFile = {
+        _id: file._id,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+        size: file.size,
+        filename: file.filename,
+        uploaderId: file.uploaderId,
+        status: file.status,
+        categories: file.categories,
+        tags: file.tags,
+        description: file.description,
+        uploadedAt: file.uploadedAt,
+        updatedAt: file.updatedAt
+      };
+
       res.json({
         success: true,
-        data: file
+        data: safeFile
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 下载文件
+   */
+  static async downloadFile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const fileService = container.getFileService();
+      const fileStorageService = container.getFileStorageService();
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: '无效的文件ID'
+        });
+      }
+
+      const file = await fileService.findFileById(new ObjectId(id));
+      if (!file) {
+        return res.status(404).json({
+          success: false,
+          message: '文件不存在'
+        });
+      }
+
+      // 检查文件是否存在于磁盘
+      if (!fileStorageService.fileExists(file.filename)) {
+        return res.status(404).json({
+          success: false,
+          message: '文件已丢失'
+        });
+      }
+
+      // 设置下载头
+      res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
+      res.setHeader('Content-Type', file.mimeType);
+      res.setHeader('Content-Length', file.size.toString());
+
+      // 创建文件流并发送
+      const fileStream = fileStorageService.getFileStream(file.filename);
+      if (fileStream) {
+        fileStream.pipe(res);
+      } else {
+        res.status(500).json({
+          success: false,
+          message: '文件读取失败'
+        });
+      }
     } catch (error) {
       next(error);
     }

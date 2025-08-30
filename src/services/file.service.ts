@@ -153,8 +153,9 @@ export class FileService {
 
     // 删除磁盘上的文件
     try {
-      if (fs.existsSync(file.filepath)) {
-        fs.unlinkSync(file.filepath);
+      const fileStorageService = new (await import('./file-storage.service.js')).FileStorageService();
+      if (fileStorageService.fileExists(file.filename)) {
+        fileStorageService.deleteFile(file.filename);
       }
     } catch (error) {
       console.error('删除磁盘文件失败:', error);

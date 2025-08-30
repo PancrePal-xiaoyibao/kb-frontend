@@ -40,7 +40,6 @@ export class UploadService {
         mimeType: file.mimetype,
         size: file.size,
         filename: file.filename,
-        filepath: file.path,
         uploaderId,
         uploadIp,
         categories: categories || [],
@@ -60,6 +59,70 @@ export class UploadService {
       return {
         success: false,
         error: '文件上传处理失败'
+      };
+    }
+  }
+
+  /**
+   * 统一文件上传处理
+   * 支持单文件和多文件
+   */
+  async handleFileUpload(files: Express.Multer.File[], req: Request, categories?: string[], uploaderId?: ObjectId): Promise<{
+    success: boolean;
+    files?: any[];
+    errors?: string[];
+  }> {
+    try {
+      if (!files || files.length === 0) {
+        return {
+          success: false,
+          errors: ['没有接收到文件']
+        };
+      }
+
+      const uploadIp = this.getClientIp(req);
+      const results = [];
+      const errors = [];
+
+      for (const file of files) {
+        try {
+          const fileInput: FileInput = {
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            filename: file.filename,
+            uploaderId,
+            uploadIp,
+            categories: categories || [],
+            tags: this.extractTagsFromFilename(file.originalname),
+            description: this.generateDescription(file)
+          };
+
+          const savedFile = await this.fileService.saveFileMetadata(fileInput);
+          results.push(savedFile);
+        } catch (error) {
+          console.error(`文件 ${file.originalname} 上传失败:`, error);
+          errors.push(`文件 ${file.originalname} 上传失败`);
+        }
+      }
+
+      if (results.length === 0) {
+        return {
+          success: false,
+          errors
+        };
+      }
+
+      return {
+        success: true,
+        files: results,
+        errors: errors.length > 0 ? errors : undefined
+      };
+    } catch (error) {
+      console.error('文件上传处理失败:', error);
+      return {
+        success: false,
+        errors: ['文件上传处理失败']
       };
     }
   }
@@ -92,7 +155,6 @@ export class UploadService {
             mimeType: file.mimetype,
             size: file.size,
             filename: file.filename,
-            filepath: file.path,
             uploaderId,
             uploadIp,
             categories: categories || [],
@@ -151,7 +213,7 @@ export class UploadService {
       tags.push(ext.substring(1)); // 去掉点号
     }
 
-    // 提取文件名中的关键词作为标签
+    // 提取文件名中的关键词作为标签，后续可以尝试使用LLM
     const nameWithoutExt = path.basename(filename, ext);
     const words = nameWithoutExt.split(/[-_\s]+/);
     
