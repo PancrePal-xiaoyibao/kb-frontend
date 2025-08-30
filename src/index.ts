@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { initDatabase } from './db.js';
 import { container } from './services/container.js';
 import filesRouter from './routes/files.routes.js';
+import linksRouter from './routes/links.routes.js';
 import authRouter from './routes/auth.routes.js';
 import { createLogger } from './utils/logger.js';
 
@@ -24,7 +25,8 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // API v1
-app.use('/api/v1/file', filesRouter);
+app.use('/api/v1/files', filesRouter);
+app.use('/api/v1/links', linksRouter);
 app.use('/api/v1/auth', authRouter);
 
 // 全局404处理 - 捕获所有未匹配的路由

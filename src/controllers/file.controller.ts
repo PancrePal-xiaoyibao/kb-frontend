@@ -11,6 +11,8 @@ const logger = createLogger('FileController');
  * 处理文件相关的HTTP请求
  */
 export class FileController {
+  
+  
   /**
    * 统一文件上传接口
    * 支持单文件和多文件上传
@@ -449,6 +451,7 @@ export class FileController {
       next(error);
     }
   }
-}
+
+  }
 
 

@@ -27,5 +27,3 @@ router.post('/batch/status', FileController.batchUpdateStatus);
 router.use(uploadErrorHandler);
 
 export default router;
-
-

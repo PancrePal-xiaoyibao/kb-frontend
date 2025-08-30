@@ -19,6 +19,12 @@ export interface FileModel {
   description?: string;        // 文件描述
   uploadedAt: Date;           // 上传时间
   updatedAt: Date;            // 更新时间
+  // 链接相关字段
+  isLink?: boolean;           // 是否为链接类型
+  linkUrl?: string;           // 链接URL
+  linkTitle?: string;         // 链接标题
+  linkDescription?: string;   // 链接描述
+  linkThumbnail?: string;     // 链接缩略图URL
 }
 
 /**
@@ -45,6 +51,12 @@ export interface FileInput {
   categories: string[];       // 文件分类（前端提供）
   tags?: string[];
   description?: string;
+  // 链接相关字段
+  isLink?: boolean;
+  linkUrl?: string;
+  linkTitle?: string;
+  linkDescription?: string;
+  linkThumbnail?: string;
 }
 
 /**
@@ -70,4 +82,26 @@ export interface FileUpdate {
   tags?: string[];
   description?: string;
   status?: FileStatus;
+}
+
+/**
+ * 链接上传输入接口
+ */
+export interface LinkUploadInput {
+  url: string;                // 链接URL
+  title?: string;             // 链接标题
+  description?: string;        // 链接描述
+  categories: string[];       // 分类
+  tags?: string[];            // 标签
+  uploaderId?: ObjectId;      // 上传者ID
+  uploadIp: string;           // 上传者IP
+}
+
+/**
+ * 批量链接上传输入接口
+ */
+export interface BatchLinkUploadInput {
+  links: LinkUploadInput[];
+  categories?: string[];      // 全局分类（应用到所有链接）
+  tags?: string[];            // 全局标签（应用到所有链接）
 }
